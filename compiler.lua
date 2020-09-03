@@ -142,7 +142,7 @@ end
 
 do
 	print("Compiled successfully. " .. #bc .. " bytes")
-	local f = io.open("new.llluac", "wb")
+	local f = io.open("new.luac", "wb")
 	f:write(bc)
 	f:close()
 end
