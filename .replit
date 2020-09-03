@@ -1,1 +1,1 @@
-run = "git clone https://github.com/LuaJIT/LuaJIT.git make --quiet install luajit - print('test')"
+run = "(LuaJIT/src/luajit compiler.lua) || (git clone https://github.com/LuaJIT/LuaJIT.git || (cd LuaJIT && ls && make --quiet && src/luajit compiler.lua))"
