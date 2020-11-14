@@ -1,7 +1,5 @@
 local ffi = require("ffi")
-
 local util = require("util")
-
 local BCDUMP_KGC_CHILD, BCDUMP_KGC_TAB, BCDUMP_KGC_I64, BCDUMP_KGC_U64, BCDUMP_KGC_COMPLEX, BCDUMP_KGC_STR = 0, 1, 2, 3, 4, 5
 
 local BCDUMP_KGC = {
@@ -156,6 +154,7 @@ do
 				local narray, nhash
 				p, narray = bc.ReadULEB(p)
 				p, nhash = bc.ReadULEB(p)
+				print("narray", narray, "nhash", nhash)
 
 				for i = 0, narray - 1 do
 					local val
@@ -243,7 +242,6 @@ do
 
 		function bc.WriteProtoGC(p, kgc, base)
 			local gctype = kgc[2]
-
 			p = bc.WriteULEB(p, gctype == BCDUMP_KGC_STR and BCDUMP_KGC_STR + #kgc[1] or gctype)
 
 			if gctype == BCDUMP_KGC_TAB then
@@ -393,7 +391,6 @@ local bcdumpflags = {
 	[BCDUMP_F_FR2] = "BCDUMP_F_FR2",
 }
 
-
 local PROTO_CHILD = 0x01 -- Has child prototypes.
 local PROTO_VARARG = 0x02 -- Vararg function.
 local PROTO_FFI = 0x04 -- Uses BC_KCDATA for FFI datatypes.
@@ -485,7 +482,6 @@ function ProtoM:ReadFromBC(p)
 		for kn = 0, sizekn - 1 do
 			local num
 			p, num = bc.ReadConstNum(p)
-
 			kns[kn] = num
 		end
 	end
@@ -525,8 +521,8 @@ function ProtoM:ReadFromBC(p)
 				p, s = bc.ReadULEB(p)
 				p, e = bc.ReadULEB(p)
 			end
-			p = p + 1
 
+			p = p + 1
 			self.varinfo = ffi.string(pp, p - pp)
 		end
 	end
@@ -534,10 +530,11 @@ end
 
 function ProtoM:WriteToBC(buf, p)
 	if bit.band(self.flags, PROTO_CHILD) ~= 0 then
-
 		local kgcs = self.kgc
+
 		for kgc = 0, self.sizekgc - 1 do
 			local k = kgcs[kgc]
+
 			if k[2] == BCDUMP_KGC_CHILD then
 				p, base = k[1]:WriteToBC(buf, p)
 			end
@@ -687,11 +684,10 @@ function ChunkM:ReadFromBC(bcode)
 		self.protoslen = pi
 		p = p + protolen
 	end
-
 	-- print(self, "\n\tSignature: " .. self.signature, "\n\tVersion: " .. self.version, "\n\tFlags: " .. util.BitflagToString(self.flags, bcdumpflags), "\n\tStripped: " .. (self.strip and "true" or "false"), "\n\tChunkname: " .. self.chunkname, "\n\tProtos: " .. self.protoslen)
 	-- for i = pi - 1, 0, -1 do
-		-- local proto = protos[i]
-		-- print(proto, "\n\tBC: " .. proto.sizebc, "\n\tUVs: " .. proto.sizeuv, "\n\tKGC: " .. proto.sizekgc, "\n\tlua_Number: " .. proto.sizekn, "\n\tParameters: " .. proto.numparams, "\n\tChildren: " .. proto.childrenlen, "\n\tParent: " .. (proto.parent ~= nil and "true" or "false"), "\n\tFlags: " .. util.BitflagToString(proto.flags, protoflags), "\n\tFramesize: " .. proto.framesize)
+	-- local proto = protos[i]
+	-- print(proto, "\n\tBC: " .. proto.sizebc, "\n\tUVs: " .. proto.sizeuv, "\n\tKGC: " .. proto.sizekgc, "\n\tlua_Number: " .. proto.sizekn, "\n\tParameters: " .. proto.numparams, "\n\tChildren: " .. proto.childrenlen, "\n\tParent: " .. (proto.parent ~= nil and "true" or "false"), "\n\tFlags: " .. util.BitflagToString(proto.flags, protoflags), "\n\tFramesize: " .. proto.framesize)
 	-- end
 end
 
@@ -703,7 +699,6 @@ function ChunkM:WriteToBC()
 	p = p + 3
 	p[0] = self.version
 	p = p + 1
-
 	p = bc.WriteULEB(p, self.flags)
 
 	if bit.band(self.flags, BCDUMP_F_STRIP) == 0 then
@@ -713,7 +708,6 @@ function ChunkM:WriteToBC()
 	end
 
 	p, base = self.protos[self.protoslen - 1]:WriteToBC(buf, p)
-
 	p, base = buf:Resize(p, 1)
 	p[0] = 0
 	p = p + 1
@@ -731,5 +725,11 @@ function Chunk()
 		protoslen = 0,
 	}, ChunkM)
 end
+
+local c = Chunk()
+
+c:ReadFromBC(string.dump(function()
+	return {nil, nil}
+end))
 
 return {Chunk, Proto}
