@@ -1,4 +1,29 @@
 # LLLua concept
+Table of Contents
+-
+* [My View to Lua world](#my-view-to-lua-world)
+  * [Lua 1.0](#lua-10)
+  * [Lua 3.0](#lua-30)
+  * [Lua 5.4](#lua-54)
+  * [MetaLua](#metalua)
+  * [Typed Lua](#typed-lua)
+* [What do I want](#what-do-i-want)
+* [LLLua](#lllua)
+* [New Language Idea](#new-language-idea)
+  * [Main Rule](#main-rule)
+  * [1. Static types](#1-static-types)
+  * [2. Metaprogrammed Lua with Lua](#2-metaprogrammed-lua-with-lua)
+  * [3. Preprocessor](#3-preprocessor)
+  * [4. Enumerations](#4-enumerations)
+  * [5. Inline assembly bytecode](#5-inline-assembly-bytecode)
+  * [6. Attributes](#6-attributes)
+  * [7. Compile time optimizations](#7-compile-time-optimizations)
+  * [8. Classes/objects](#8-classesobjects)
+  * [9. Compile time defaults](#9-compile-time-defaults)
+  * [10. Compile time overloads/templates](#10-compile-time-overloadstemplates)
+* [Why?](#why)
+* [Who will use it?](#who-will-use-it)
+
 My view to Lua world
 -
 Lua is a language simple in syntax and powerful in features. However the more experienced you are the more repetitive and long code you have to write, especially when you are trying to optimize it. The optimization problem is much more acute in LuaJIT, but for me (as micro optimization fan), it's a challenge to optimize Lua VM as much possible (and reasonable).
@@ -382,7 +407,7 @@ text = tostring(text)
 ##end
 ```
 
-#### 10. Compile time overloads/templates
+### 10. Compile time overloads/templates
 Sometimes one function does job for several types, instead of using runtime checks a function can be split into templates.
 ```lua
 function IsValid(val: any) <inline>
