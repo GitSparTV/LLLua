@@ -2,12 +2,15 @@
 My view to Lua world
 -
 Lua is a language simple in syntax and powerful in features. However the more experienced you are the more repetitive and long code you have to write, especially when you are trying to optimize it. The optimization problem is much more acute in LuaJIT, but for me (as micro optimization fan), it's a challenge to optimize Lua VM as much possible (and reasonable).
+
 The main reason why I have such question is Lua itself, but it's fair. Lua developers states:
 >*We think that the main reasons for this success lie in our original design decisions: keep the language simple and small; keep the implementation simple, small, fast, portable, and free.*
 [\[Source\]](https://www.lua.org/history.html)
 
 Lua has lots of derivatives solving different problems and adding new features. What is more interesting Lua had such features as preprocessor, table initial size allocation syntax, metamethods for `_G`, etc.
+
 None of them solves my problems fully or does what I want.
+
 Let's take a look at some interesting ideas in them.
 
 ### Lua 1.0
@@ -16,6 +19,7 @@ The first version of Lua has following syntax:
 local tbl = @(2) 
 ```
 This was meant to be used for table pre-allocation or initial size. This syntax supported not just a constant number, it can be any expression, as a regular function argument. It can be imagined as a function with a name `@`. Lua didn't have array part at that time, everything was in the hash part.
+
 This syntax was removed in Lua 2.0 with more simplified syntax we still use.
 > *The syntax for table construction has been greatly simplied. The old `@(size)` has been substituted by `{}`.*
 [\[Source\]](https://www.lua.org/manual/2.1/subsectionstar3_9_1.html#S0910)
@@ -64,6 +68,7 @@ lua: call expression not a function
 ```
 
 Preprocessor statements used `1` as `true` and everything else as `false` because booleans were introduced only in Lua 5.0.
+
 Important note here they didn't accept expressions (expect the global variable name), the value must be evaluated at compile time.
 
 Preprocessor facilities were removed in Lua 4.0 beta, debug information is now always printed with errors and made more descriptive.
@@ -79,12 +84,15 @@ Lua 5.4 introduced constant values.
 local a <const> = true
 ```
 Constant values throw compile-time error when the value is modified.
+
 Since the check is happening at compilation, `<const>` can't be set on globals (the same for `<close>` variables).
 
 ### MetaLua
 
 MetaLua is Lua 5.1 extended with metaprogramming on high-level.
+
 It allows you to modify and modify lexical grammar and parsing stage.
+
 MetaLua allows to add operators, macros, definitions, auto-documentation, code analysis, etc.
 
 Here is the example of C-like ternary operator made with MetaLua.
@@ -161,11 +169,13 @@ end
 return a
 ```
 One of the first features was C-like chars that replaced single quotes string literals syntax (`'a'` will be an ascii byte).
+
 After first demo I was thinking how to implement other features like GC consts, upvalues, etc. This forced me to made a proper way to implement them, but at the end the idea died as it would be longer to write all of this.
 
 New Language Idea
 - 
 So I want to make a new language, probably with the same name, since it will compile to bytecode as well. (with a possible option to transpile to lua as well, of course, with more limited features)
+
 Here is the list of features I set to accomplish now.
 
 ### Main Rule
@@ -205,6 +215,7 @@ print(#[GenerateRandomString()]) -- kbXg(_@fIV
 
 ### 3. Preprocessor
 Since LLLua is mostly an advanced compiler preprocessor is one of my top goal. Most common debug function in Lua is `print`, but leaving them everywhere is not great, so usually when I'm done with debugging I remove all of them, but what if a new bug appeared. Placing them again? What if we can enable something similar to `$debug` here?
+
 Syntax is taken from Lua 3.0.
 ```lua
 $debug
@@ -254,7 +265,9 @@ $include("gmod.lllua")
 Garry's Mod has ridiculous amount of enums, but all are required for the developers, but 99.9% of them are not stored in tables, they are all global like `_G.ENUM_1 = 1 _G.ENUM_2 = 2 _G.ENUM_3 = 3`.
 
 Not only this affects _G iteration and hashing little bit, but also forces you to do global indexing. (ok, with 1 enum you are probably fine, but imagine 10 of them in a loop).
+
 Enumerations would make it easier and faster.
+
 Syntax is taken from Nelua.
 ```lua
 TEXT_ALIGN = @enum({
@@ -270,6 +283,7 @@ First enum defaults to 1, to make it 0, assign explicitly.
 Garry's Mod uses these enums in text drawing function in `xAlign`, `yAlign`.
 
 `draw.SimpleText(text, font, x, y, color, xAlign, yAlign)`
+
 To statically type this function we can use enum now.
 ```lua
 function draw.SimpleText(text: string, font: string, x: number, y: number, color: Color, xAlign: TEXT_ALIGN, yAlign: TEXT_ALIGN)
@@ -304,7 +318,9 @@ end
 
 ### 6. Attributes
 LuaJIT bytecode offers some hidden features that can be used in LLLua.
+
 Also with static typing we can allow comptime `<const>` variables (even globals).
+
 Syntax will use Lua 5.4 angles brackets (`<>`)
 ```lua
 function IterateSomething(tbl: table) <nojit>
@@ -317,6 +333,7 @@ end
 
 ### 7. Compile time optimizations
 This is the most debatable section for me because I don't know much about LuaJIT optimizations, how optimizing bytecode will affect its own JIT compilation, will it break LuaJIT, what worth doing and what not.
+
 But when I do a research in this field I will decide what can be really implemented.
 
 Current ideas:
@@ -346,6 +363,7 @@ end
 
 ### 9. Compile time defaults
 Garry's Mod has a `draw` library which is a beginner-friendly library making drawing text and shapes. However it's full of runtime default check statements.
+
 Example:
 ```lua
 function SimpleText( text, font, x, y, colour, xalign, yalign )
@@ -384,14 +402,17 @@ My idea is to make an advanced compiler for Lua that helps write optimized code 
 Who will use it?
 -
 The project is aimed for people is wants to code in Lua differently, probably tired of coding in regular Lua.
+
 As a future idea, LLLua can be embedded as regular compiler for Lua.
 
 LLLua is definitely not a project you force everyone to use because it's a detached compiler, to use in regular lua project will require you to make .lllua headers for its API if you want static typing. Making the whole project with LLLua would be better but not every framework supports bytecode loading (which is why I have a future idea to make it generate regular Lua with limited features).
 
 Can that idea fail?
+
 Yes, I'm not an expert in anything outside Lua, just programming in it as a hobby. I'm sure the stuff I mention above is a subject to change as soon I learn something after posting this article.
 
 Is it possible that only me will use this language?
+
 Yes, and I'm fine with it.
 
 ---
