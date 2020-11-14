@@ -15,7 +15,7 @@ Table of Contents
   * [2. Metaprogrammed Lua with Lua](#2-metaprogrammed-lua-with-lua)
   * [3. Preprocessor](#3-preprocessor)
   * [4. Enumerations](#4-enumerations)
-  * [5. Inline assembly bytecode](#5-inline-assembly-bytecode)
+  * [5. Inline ~~assembly~~ bytecode](#5-inline-assembly-bytecode)
   * [6. Attributes](#6-attributes)
   * [7. Compile time optimizations](#7-compile-time-optimizations)
   * [8. Classes/objects](#8-classesobjects)
