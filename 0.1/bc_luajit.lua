@@ -51,9 +51,8 @@ do
 
 	function bc.ReadULEB33(p)
 		local i = 0
-		local v = p[i]
+		local v = bitrshift(p[i], 1)
 		i = i + 1
-		v = bitrshift(v, 1)
 
 		if v >= 0x40 then
 			local sh = 6
@@ -70,11 +69,10 @@ do
 	end
 
 	function bc.ReadInstruction(p)
-		local C = p[2]
-		local B = p[3]
-		local D = bit.lshift(B, 8) + C
-
-		return p + 4, p[0], p[1], B, C, D
+		local caret = p.buffer
+		local B = caret[3]
+		local C = caret[2]
+		return p + 4, caret[0], caret[1], B, C, C + bit.lshift(B, 8)
 	end
 
 	function bc.WriteInstruction(p, inst)
@@ -132,7 +130,7 @@ do
 			elseif type == BCDUMP_KTAB_STR then
 				value = ""
 			elseif type > BCDUMP_KTAB_STR then
-				value = ffi.string(p, type - 5)
+				value = ffi.string(p.buffer, type - 5)
 				p = p + (type - 5)
 			end
 
@@ -144,8 +142,12 @@ do
 			local value
 
 			if gctype == BCDUMP_KGC_CHILD then
+				-- print("0")
 				local chunk = proto.chunk
-				value = chunk.protos[chunk.protoslen - 1]
+				local k = chunk.protoslen - 1
+				value = chunk.protos[k]
+				chunk.protoslen = k
+				chunk.protos[k] = nil
 				proto.childrenlen = proto.childrenlen + 1
 				proto.children[proto.childrenlen] = value
 				value.parent = proto
@@ -154,11 +156,13 @@ do
 				local narray, nhash
 				p, narray = bc.ReadULEB(p)
 				p, nhash = bc.ReadULEB(p)
-				print("narray", narray, "nhash", nhash)
 
+				-- print("1 " .. narray .. " " .. nhash)
+				-- print("narray", narray, "nhash", nhash)
 				for i = 0, narray - 1 do
 					local val
 					p, val = ReadGCKV(p)
+					-- print(i, val)
 					value[i] = val
 				end
 
@@ -166,7 +170,13 @@ do
 					local k, v
 					p, k = ReadGCKV(p)
 					p, v = ReadGCKV(p)
-					value[k] = v
+
+					-- print(k,v)
+					if k ~= nil then
+						value[k] = v
+					else
+						error("k is nil")
+					end
 				end
 			elseif gctype == BCDUMP_KGC_I64 then
 				local lo, hi
@@ -200,7 +210,12 @@ do
 			elseif gctype == BCDUMP_KGC_STR then
 				value = ""
 			elseif gctype > BCDUMP_KGC_STR then
-				value = ffi.string(p, gctype - 5)
+				-- io.write(gctype)
+				-- for i = 0, gctype - 6 do
+				-- 	io.write(" ",p.buffer[i])
+				-- end
+				-- io.write("\n")
+				value = ffi.string(p.buffer, gctype - 5)
 				p = p + (gctype - 5)
 				gctype = BCDUMP_KGC_STR
 			end
@@ -315,7 +330,7 @@ do
 			a = conv.d
 		end
 
-		return p, a
+		return p, a, isdouble
 	end
 
 	function bc.WriteConstNum(p, num)
@@ -347,25 +362,26 @@ do
 	end
 
 	function bc.ReadDebugLine(p, bytes, isle)
+		local curpos = p.buffer
 		if bytes == 1 then
-			return p + 1, p[0]
+			return p + 1, curpos[0]
 		elseif bytes == 2 then
 			if isle then
-				return p + 2, p[0] + bit.lshift(p[1], 8)
+				return p + 2, curpos[0] + bit.lshift(curpos[1], 8)
 			else
-				return p + 2, p[1] + bit.lshift(p[0], 8)
+				return p + 2, curpos[1] + bit.lshift(curpos[0], 8)
 			end
 		elseif bytes == 4 then
 			if isle then
-				return p + 4, p[0] + bit.lshift(p[1], 8) + bit.lshift(p[2], 8 * 2) + bit.lshift(p[3], 8 * 3)
+				return p + 4, curpos[0] + bit.lshift(curpos[1], 8) + bit.lshift(curpos[2], 8 * 2) + bit.lshift(curpos[3], 8 * 3)
 			else
-				return p + 4, p[3] + bit.lshift(p[2], 8) + bit.lshift(p[1], 8 * 2) + bit.lshift(p[0], 8 * 3)
+				return p + 4, curpos[3] + bit.lshift(curpos[2], 8) + bit.lshift(curpos[1], 8 * 2) + bit.lshift(curpos[0], 8 * 3)
 			end
 		end
 	end
 
 	function bc.ReadDebugName(p)
-		local len, start = 0, p
+		local len, start = 0, p.buffer
 
 		while p[0] ~= 0 do
 			p = p + 1
@@ -421,7 +437,13 @@ function ProtoM:__tostring()
 	return string.format("Proto: %p", self)
 end
 
-function ProtoM:ReadFromBC(p)
+function ProtoM:ReadFromBC(p, plen)
+	-- for i = 0, plen - 1 do
+	-- 	io.write(p.buffer[i]," ")
+	-- end
+	-- print()
+
+	local start = p.buffer
 	local flags = p[0]
 	local numparams = p[1]
 	local framesize = p[2]
@@ -431,15 +453,27 @@ function ProtoM:ReadFromBC(p)
 	p, sizekgc = bc.ReadULEB(p)
 	p, sizekn = bc.ReadULEB(p)
 	p, sizebc = bc.ReadULEB(p)
+	-- print(flags .. " flags")
+	-- print(numparams .. " params")
+	-- print(framesize .. " framesize")
+	-- print(sizeuv .. " kuv")
+	-- print()
+	-- print(sizekgc .. " kgc")
+	-- print(sizekn .. " knum")
+	-- print(sizebc .. " kbc")
+	-- print("\nBC")
 	self.flags, self.numparams, self.framesize, self.sizeuv, self.sizekgc, self.sizekn, self.sizebc = flags, numparams, framesize, sizeuv, sizekgc, sizekn, sizebc
-	local sizedbg
+	local sizedbg = 0
 
-	if bit.band(self.chunk.flags, BCDUMP_F_STRIP) then
+	if bit.band(self.chunk.flags, BCDUMP_F_STRIP) == 0 then
 		p, sizedbg = bc.ReadULEB(p)
 
+		-- print(sizedbg .. " sizedbg")
 		if sizedbg ~= 0 then
 			p, self.firstline = bc.ReadULEB(p)
 			p, self.numline = bc.ReadULEB(p)
+			-- print(self.firstline .. " firstline")
+			-- print(self.numline .. " numline")
 		end
 	end
 
@@ -447,24 +481,31 @@ function ProtoM:ReadFromBC(p)
 		local insts = self.insts
 
 		for line = 0, sizebc - 1 do
-			local op, a, b, c, d
+			-- io.write(p[0], " ", p[1], " ",  p[2], " ", p[3], "\n")
+			-- p = p + 4
+			-- local op, a, b, c, d
 			p, op, a, b, c, d = bc.ReadInstruction(p)
+			assert(util.GetOpcodeName(op, self.chunk.version) ~= "")
+			-- print(util.GetOpcodeName(op, self.chunk.version), a, b, c, d)
 
 			insts[line] = {op, a, b, c, d}
 		end
 	end
 
+	-- if sizeuv ~= 0 then print("\nUV") end
 	do
 		local uvs = self.uv
 
 		for uvi = 0, sizeuv - 1 do
+			-- io.write(p[0], " ", p[1], "\n")
+			-- p = p + 2
 			local index, flags
 			p, index, flags = bc.ReadProtoUpvalue(p)
-
 			uvs[uvi] = {index, flags}
 		end
 	end
 
+	-- print("\nKGC")
 	do
 		local kgcs = self.kgc
 
@@ -473,9 +514,11 @@ function ProtoM:ReadFromBC(p)
 			p, val, type = bc.ReadProtoGC(p, self)
 
 			kgcs[kgc] = {val, type}
+			-- print(val, type)
 		end
 	end
 
+	-- if sizekn ~= 0 then print("\nKNUM") end
 	do
 		local kns = self.kn
 
@@ -491,41 +534,42 @@ function ProtoM:ReadFromBC(p)
 		local isle = bit.band(self.chunk.flags, BCDUMP_F_BE) == 0
 
 		do
-			local pp = p
+			local pp = p.buffer
+			local insts = self.insts
 
-			for line = 0, sizebc - 1 do
-				p = bc.ReadDebugLine(p, bytenum, isle)
+			for b = 0, sizebc - 1 do
+				p, line = bc.ReadDebugLine(p, bytenum, isle)
+				insts[b][6] = line
 			end
 
-			self.lineinfo = ffi.string(pp, p - pp)
+			self.lineinfo = ffi.string(pp, p.buffer - pp)
+			-- print(self.lineinfo, "lineinfo")
 		end
 
 		do
-			local pp = p
-
+			local pp = p.buffer
 			for uvi = 0, sizeuv - 1 do
 				p = bc.ReadDebugName(p)
-				self.uvinfo = ffi.string(pp, p - pp)
 			end
+			self.uvinfo = ffi.string(pp, p.buffer - pp)
 		end
 
 		do
-			local pp = p
-
+			local pp = p.buffer
 			while p[0] ~= 0 do
-				while p[0] ~= 0 do
+				repeat
 					p = p + 1
-				end
-
+				until p[0] == 0
 				p = p + 1
 				p, s = bc.ReadULEB(p)
 				p, e = bc.ReadULEB(p)
 			end
-
 			p = p + 1
-			self.varinfo = ffi.string(pp, p - pp)
+			self.varinfo = ffi.string(pp, p.buffer - pp)
 		end
 	end
+
+	assert(plen == p.buffer - start, plen .. ", " .. p.buffer - start)
 end
 
 function ProtoM:WriteToBC(buf, p)
@@ -653,8 +697,56 @@ function ChunkM:ReadFromFile(path, strip)
 	return self:ReadFromBC(string.dump(stat, strip))
 end
 
+function ChunkM:ReadFromFileBC(path)
+	local f, err = io.open(path, "rb")
+	if not f then return f, err end
+	local bcode = f:read("*a")
+	f:close()
+
+	return self:ReadFromBC(bcode)
+end
+
+function ChunkM:ReadFromFunction(func, strip)
+	return self:ReadFromBC(string.dump(func, strip))
+end
+
+local savedata = {
+	__add = function(self, v)
+		self.buffer = self.buffer + v
+		self.offset = self.offset + v
+
+		return self
+	end,
+}
+
+savedata.copy = function(self)
+	return setmetatable({
+		buffer = self.buffer,
+		start = self.start,
+		len = self.len,
+		offset = self.offset
+	}, savedata)
+end
+
+savedata.__index = function(self, k)
+	if k == "copy" then return savedata.copy end
+
+	if self.offset + k > self.len then
+		print("-=-=-=-=-\nBuffer distance:", self.buffer - self.start, "\nLen:", self.len, "\nOffset: ", self.offset, "\nIndex:", k)
+		error("OUT OF BOUNDS")
+	end
+
+	return self.buffer[k]
+end
+
 function ChunkM:ReadFromBC(bcode)
-	local p = ffi.new("uint8_t[?]", #bcode + 1, bcode)
+	local p = setmetatable({
+		buffer = ffi.new("uint8_t[?]", #bcode + 1, bcode),
+		len = #bcode - 1,
+		offset = 0
+	}, savedata)
+
+	p.start = p.buffer
 	if p[0] ~= 27 or p[1] ~= 76 or p[2] ~= 74 then return false, "Signature mismatch" end
 	self.version = p[3]
 	p = p + 4
@@ -666,28 +758,42 @@ function ChunkM:ReadFromBC(bcode)
 	if bit.band(flags, BCDUMP_F_STRIP) == 0 then
 		local len
 		p, len = bc.ReadULEB(p)
-		self.chunkname = ffi.string(p, len)
+		self.chunkname = ffi.string(p.buffer, len)
 		p = p + len
 	end
 
 	local protos = self.protos
-	local pi = 0
 
 	while true do
 		local protolen
+		if p[0] == 0 then break end
+
 		p, protolen = bc.ReadULEB(p)
+		-- print("protolen", pi + 1, protolen)
 		if protolen == 0 then break end
 		local pt = Proto(self)
-		pt:ReadFromBC(p)
-		protos[pi] = pt
-		pi = pi + 1
-		self.protoslen = pi
+		pt:ReadFromBC(p:copy(), protolen)
+		protos[self.protoslen] = pt
+		self.protoslen = self.protoslen + 1
 		p = p + protolen
 	end
-	-- print(self, "\n\tSignature: " .. self.signature, "\n\tVersion: " .. self.version, "\n\tFlags: " .. util.BitflagToString(self.flags, bcdumpflags), "\n\tStripped: " .. (self.strip and "true" or "false"), "\n\tChunkname: " .. self.chunkname, "\n\tProtos: " .. self.protoslen)
+
+	print(self, "\n\tSignature: " .. self.signature, "\n\tVersion: " .. self.version, "\n\tFlags: " .. util.BitflagToString(self.flags, bcdumpflags), "\n\tStripped: " .. (self.strip and "true" or "false"), "\n\tChunkname: " .. self.chunkname, "\n\tProtos: " .. self.protoslen)
+	
+
+	local proto = protos[0]
 	-- for i = pi - 1, 0, -1 do
-	-- local proto = protos[i]
-	-- print(proto, "\n\tBC: " .. proto.sizebc, "\n\tUVs: " .. proto.sizeuv, "\n\tKGC: " .. proto.sizekgc, "\n\tlua_Number: " .. proto.sizekn, "\n\tParameters: " .. proto.numparams, "\n\tChildren: " .. proto.childrenlen, "\n\tParent: " .. (proto.parent ~= nil and "true" or "false"), "\n\tFlags: " .. util.BitflagToString(proto.flags, protoflags), "\n\tFramesize: " .. proto.framesize)
+	for bc = 0, proto.sizebc - 1 do
+		local v = proto.insts[bc]
+		if util.GetOpcodeName(v[1], proto.chunk.version) == "FNEW  " then
+			print(util.GetOpcodeName(v[1], proto.chunk.version), proto.sizekgc - 1 - v[5])
+		end
+	end
+	for K = 0, proto.sizekgc - 1 do
+		local GC = proto.kgc[K]
+		print(K, GC[1], GC[2])
+	end
+	-- 	-- print(proto, "\n\tBC: " .. proto.sizebc, "\n\tUVs: " .. proto.sizeuv, "\n\tKGC: " .. proto.sizekgc, "\n\tlua_Number: " .. proto.sizekn, "\n\tParameters: " .. proto.numparams, "\n\tChildren: " .. proto.childrenlen, "\n\tParent: " .. (proto.parent ~= nil and "true" or "false"), "\n\tFlags: " .. util.BitflagToString(proto.flags, protoflags), "\n\tFramesize: " .. proto.framesize)
 	-- end
 end
 
@@ -695,7 +801,7 @@ function ChunkM:WriteToBC()
 	local buf = util.Buffer(1024 + #self.chunkname + 5, "uint8_t*")
 	local p = buf:GetBuffer()
 	local base = p
-	ffi.copy(p, self.signature, #self.signature)
+	ffi.copy(p, self.signature, 3)
 	p = p + 3
 	p[0] = self.version
 	p = p + 1
@@ -727,9 +833,19 @@ function Chunk()
 end
 
 local c = Chunk()
+io.stdout:setvbuf("no")
+-- print(c:ReadFromFunction(function()
+-- 	local a = function()
 
-c:ReadFromBC(string.dump(function()
-	return {nil, nil}
-end))
+-- 	end
+
+-- 	print("1", "2", "3", "4", "5", "6")
+
+-- 	local b = function()
+
+-- 	end
+-- end))
+-- print(c:ReadFromFileBC("C:/Users/Spar/.vscode/extensions/venner.vscode-glua-enhanced-1.0.0/src/lib/gluac/out.txt"))
+print(c:ReadFromFile("E:/Spar/LLLua/0.1/compiler.lua", true))
 
 return {Chunk, Proto}
