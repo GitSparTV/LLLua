@@ -29,6 +29,7 @@ local LexerMeta = {
 }
 
 LexerMeta.__index = LexerMeta
+LexerMeta.Next = LexerMeta.__call
 
 function LexerMeta:Error(text)
 	local begin = self.offset - 2
@@ -553,8 +554,6 @@ function LexerMeta:Scan()
 	end
 end
 
-LexerMeta.Next = LexerMeta.__call
-
 function LexerMeta:Lookahead()
 	if self.lookahead ~= tokens.eof then
 		self:Error("double lookahead")
@@ -616,7 +615,6 @@ local function LexerNext(self)
 		self.tok = lookahead
 		self.lookahead = tokens.eof
 	end
-
 	-- print(tokennames[self.tok], self.linenumber)
 end
 
