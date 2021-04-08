@@ -15,6 +15,7 @@ local LexerMeta = {
 		if offset <= self.size then
 			local c = _b(self.buf, offset)
 			self.offset = offset + 1
+			self.columnnumber = self.columnnumber + 1
 			self.c = c
 
 			return c
@@ -49,6 +50,7 @@ function LexerMeta:Newline()
 	end
 
 	self.linenumber = linenumber
+	self.columnnumber = 1
 end
 
 do
@@ -610,7 +612,7 @@ local function LexerSetup(buffer)
 		offset = 1,
 		c = 0,
 		linenumber = 1,
-		columnnumber = 0,
+		columnnumber = 1,
 		lastline = 0,
 		strbuf = {},
 		strbufsize = 0,
