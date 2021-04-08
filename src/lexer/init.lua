@@ -53,23 +53,28 @@ function LexerMeta:Error(text)
 	os.exit(1)
 end
 
-function LexerMeta:Newline()
-	local c = self.c
+local char_newlines_lookup = {
+	[_b("\n")] = true,
+	[_b("\r")] = true
+}
 
-	if not chars.iseol(c) then
-		error("bad usage")
+function LexerMeta:Newline()
+	local old = self.c
+
+	if not char_newlines_lookup[old] then
+		self:Error("bad usage")
 	end
 
-	local new = self()
+	local c = self()
 
-	if chars.iseol(new) and c ~= new then
+	if char_newlines_lookup[c] and c ~= old then
 		self()
 	end
 
 	local linenumber = self.linenumber + 1
 
 	if linenumber >= MAX_LENGTH then
-		error("LJ_ERR_XLINES")
+		self:Error("LJ_ERR_XLINES")
 	end
 
 	self.linenumber = linenumber
@@ -146,43 +151,38 @@ local char_lbrace, char_rbrace = _b("["), _b("]")
 local char_eq = _b("=")
 
 function LexerMeta:SkipEq()
-	local c = self.c
+	local count = 0
+	local s = self.c
 
-	if c ~= char_lbrace and c ~= char_rbrace then
+	if not (s == char_lbrace or s == char_rbrace) then
 		self:Error("bad usage")
 	end
-
-	local count = 0
 
 	while self() == char_eq and count < 0x20000000 do
 		count = count + 1
 	end
 
-	return c == self.c and count or (-count - 1)
+	return self.c == s and count or -count - 1
 end
-
-local char_newlines_lookup = {
-	[_b("\n")] = true,
-	[_b("\r")] = true
-}
 
 function LexerMeta:LongString(sep, iscomment)
 	local func = iscomment and self.Next or self.SaveNext
-	local c = self()
+	func(self)
 
-	if char_newlines_lookup[c] then
+	if char_newlines_lookup[self.c] then
 		self:Newline()
 	end
 
 	while true do
-		c = self.c
+		local c = self.c
 
 		if c == EOF then
 			self:Error(iscomment and "LJ_ERR_XLCOM" or "LJ_ERR_XLSTR")
 		elseif c == char_rbrace then
 			if self:SkipEq() == sep then
-				self()
-				break
+				func(self)
+
+				return
 			end
 		elseif char_newlines_lookup[c] then
 			if not iscomment then
@@ -195,12 +195,6 @@ function LexerMeta:LongString(sep, iscomment)
 		end
 	end
 end
-
-local chars_eol_eof_lookup = {
-	[EOF] = true,
-	[_b("\n")] = true,
-	[_b("\r")] = true,
-}
 
 local char_backslash = _b("\\")
 local char_lcurbrace, char_rcurbrace = _b("{"), _b("}")
@@ -454,17 +448,15 @@ function LexerMeta:Scan()
 
 			if self() == char_lbrace then
 				local sep = self:SkipEq()
-				self:ResetStrBuffer()
 
 				if sep >= 0 then
 					self:LongString(sep, true)
-					self:ResetStrBuffer()
 					goto cont
 				end
 			end
 
-			while not chars_eol_eof_lookup[c] do
-				c = self()
+			while not char_newlines_lookup[self.c] and self.c ~= EOF do
+				self()
 			end
 
 			::cont::
