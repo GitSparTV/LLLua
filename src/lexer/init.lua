@@ -627,9 +627,7 @@ local function LexerSetup(buffer)
 	return lex
 end
 
-local f = io.open("E:/Spar/LLLua/test.lua")
-local lex = LexerSetup(f:read("*a"))
-
-while lex.c ~= EOF do
-	LexerNext(lex)
-end
+return {
+	Setup = LexerSetup,
+	Next = LexerNext
+}
