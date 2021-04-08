@@ -30,6 +30,22 @@ local LexerMeta = {
 
 LexerMeta.__index = LexerMeta
 
+function LexerMeta:Error(text)
+	local begin = self.offset - 2
+	while true do
+		if begin <= 0 then break end
+		local char = self.buf:sub(begin, begin)
+		if char == "\n" or char == "\r" then
+			break
+		end
+		begin = begin - 1
+	end
+	local region = self.buf:sub(begin + 1, self.offset - 1)
+
+	io.write("Lexer Error:\nLine (might be incorrect): ", self.linenumber, ". Column: ", self.columnnumber, "\n", region, "\n", string.rep(" ", #region - 1), "^\n") 
+	os.exit(1)
+end
+
 function LexerMeta:Newline()
 	local c = self.c
 
@@ -97,7 +113,7 @@ do
 		local c = self.c
 
 		if not chars.isdigit(c) then
-			error("bad usage")
+			self:Error("bad usage")
 		end
 
 		local xp = char_e
@@ -114,7 +130,7 @@ do
 		local num = ScanNumber(self:ConcatStrBuffer())
 
 		if not num then
-			error("LJ_ERR_XNUMBER")
+			self:Error("LJ_ERR_XNUMBER")
 		end
 	end
 end
@@ -126,7 +142,7 @@ function LexerMeta:SkipEq()
 	local c = self.c
 
 	if c ~= char_lbrace and c ~= char_rbrace then
-		error("bad usage")
+		self:Error("bad usage")
 	end
 
 	local count = 0
@@ -155,7 +171,7 @@ function LexerMeta:LongString(sep, iscomment)
 		c = self.c
 
 		if c == EOF then
-			error(iscomment and "LJ_ERR_XLCOM" or "LJ_ERR_XLSTR")
+			self:Error(iscomment and "LJ_ERR_XLCOM" or "LJ_ERR_XLSTR")
 		elseif c == char_rbrace then
 			if self:SkipEq() == sep then
 				self()
@@ -210,9 +226,9 @@ function LexerMeta:String()
 	while c ~= delim do
 		-- print("Char: ", c >= 0 and string.char(c))
 		if c == EOF then
-			error("LJ_ERR_XSTR")
+			self:Error("LJ_ERR_XSTR")
 		elseif char_newlines_lookup[c] then
-			error("LJ_ERR_XSTR")
+			self:Error("LJ_ERR_XSTR")
 		elseif c == char_backslash then
 			c = self() -- Skip the '\\'. */
 
@@ -358,7 +374,7 @@ function LexerMeta:String()
 	end
 
 	::err_xesc::
-	error("LJ_ERR_XESC")
+	self:Error("LJ_ERR_XESC")
 end
 
 local char_spaces_lookup = {
@@ -455,7 +471,7 @@ function LexerMeta:Scan()
 			elseif sep == -1 then
 				return tokens.lbrace
 			else
-				error("LJ_ERR_XLDELIM")
+				self:Error("LJ_ERR_XLDELIM")
 			end
 		elseif c == char_eq then
 			if self() ~= char_eq then
@@ -493,7 +509,7 @@ function LexerMeta:Scan()
 			end
 		elseif c == char_tilde then
 			if self() ~= char_eq then
-				error("unexpected symbol '~'")
+				self:Error("unexpected symbol '~'")
 			else
 				self()
 
@@ -534,7 +550,7 @@ function LexerMeta:Scan()
 			local token = chars_single_tokens_lookup[c]
 
 			if not token then
-				error("Char ", c, string.char(c), "doesn't have a token")
+				self:Error("Char ", c, string.char(c), "doesn't have a token")
 			end
 
 			return token
@@ -546,7 +562,7 @@ LexerMeta.Next = LexerMeta.__call
 
 function LexerMeta:Lookahead()
 	if self.lookahead ~= tokens.eof then
-		error("double lookahead")
+		self:Error("double lookahead")
 	end
 
 	self.lookahead = self:Scan()
@@ -570,7 +586,7 @@ local stringchar = string.char
 
 function LexerMeta:SaveNext()
 	if self.c < 0 or self.c > 255 then
-		error("LexState.c is out of range (" .. self.c .. ")")
+		self:Error("LexState.c is out of range (" .. self.c .. ")")
 	end
 
 	self:Save(stringchar(self.c))
