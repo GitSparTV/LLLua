@@ -481,22 +481,12 @@ function LexerMeta:Scan()
 				return tokens.eq
 			end
 		elseif c == char_less then
-			self()
-
 			if self() ~= char_eq then
 				return tokens.less
 			else
 				self()
 
 				return tokens.le
-			end
-		elseif c == char_greater then
-			if self() ~= char_eq then
-				return tokens.greater
-			else
-				self()
-
-				return tokens.ge
 			end
 		elseif c == char_greater then
 			if self() ~= char_eq then
