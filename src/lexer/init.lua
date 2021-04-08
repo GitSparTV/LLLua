@@ -32,18 +32,24 @@ LexerMeta.__index = LexerMeta
 LexerMeta.Next = LexerMeta.__call
 
 function LexerMeta:Error(text)
-	local begin = self.offset - 2
+	local begin, end_ = self.offset - 2, self.offset - 1
+
 	while true do
 		if begin <= 0 then break end
 		local char = self.buf:sub(begin, begin)
-		if char == "\n" or char == "\r" then
-			break
-		end
+		if char == "\n" or char == "\r" then break end
 		begin = begin - 1
 	end
-	local region = self.buf:sub(begin + 1, self.offset - 1)
 
-	io.write("Lexer Error:\nLine (might be incorrect): ", self.linenumber, ". Column: ", self.columnnumber, "\n", region, "\n", string.rep(" ", #region - 1), "^\n") 
+	while true do
+		if end_ >= self.size then break end
+		local char = self.buf:sub(end_, end_)
+		if char == "\n" or char == "\r" then break end
+		end_ = end_ + 1
+	end
+
+	local region = self.buf:sub(begin + 1, end_ - 1)
+	io.write("Lexer Error (", text, "):\nLine (might be incorrect): ", self.linenumber, ". Column: ", self.columnnumber, "\n", region, "\n", string.rep(" ", #region), "^\n", debug.traceback())
 	os.exit(1)
 end
 
