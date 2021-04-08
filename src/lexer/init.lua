@@ -547,13 +547,8 @@ function LexerMeta:Scan()
 			return tokens.eof
 		else
 			self()
-			local token = chars_single_tokens_lookup[c]
 
-			if not token then
-				self:Error("Char ", c, string.char(c), "doesn't have a token")
-			end
-
-			return token
+			return chars_single_tokens_lookup[c]
 		end
 	end
 end
@@ -613,6 +608,10 @@ local function LexerNext(self)
 
 	if lookahead == tokens.eof then
 		self.tok = self:Scan()
+
+		if not self.tok then
+			self:Error("Token is nil")
+		end
 	else
 		self.tok = lookahead
 		self.lookahead = tokens.eof
