@@ -11,8 +11,8 @@ local alnum = bit.bor(alpha, digit) -- Alphabet + numbers
 local graph = bit.bor(alnum, punct) -- Graphical characters
 
 local char_bits = {
-    [-1] = 0, -- -1 (EOF)
-	[0] = cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl + space, cntrl + space, cntrl + space, cntrl + space, cntrl + space, cntrl, cntrl; -- 0 (NUL) .. 15
+    [0] = 0, -- -1 (EOF)
+	cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl + space, cntrl + space, cntrl + space, cntrl + space, cntrl + space, cntrl, cntrl; -- 0 (NUL) .. 15
 	cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl; -- 16 .. 31
 	space, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct; -- 32 ( ) .. 47 (/)
 	digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, punct, punct, punct, punct, punct, punct; -- 48 (0) .. 63 (?)
@@ -33,13 +33,13 @@ local char_bits = {
 local bitband = bit.band
 
 local function isa(c, t)
-	return bitband(char_bits[c], t) ~= 0
+	return bitband(char_bits[c + 1], t) ~= 0
 end
 
 local function MakeMap(mask)
 	local map = {}
 
-	for i = -1, #char_bits do
+	for i = 0, #char_bits - 1 do
 		if isa(i, mask) then
 			map[i] = true
 		end
@@ -78,11 +78,11 @@ local iseol = {
 local bitrshift = bit.rshift
 
 local function toupper(c)
-	return c - bitrshift(bitband(char_bits[c], lower), 1)
+	return c - bitrshift(bitband(char_bits[c + 1], lower), 1)
 end
 
 local function tolower(c)
-	return c + bitband(char_bits[c], upper)
+	return c + bitband(char_bits[c + 1], upper)
 end
 
 return {
