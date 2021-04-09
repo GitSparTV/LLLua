@@ -624,9 +624,20 @@ local function LexerSetup(buffer)
 		strbuf = {},
 		strbufsize = 0,
 		strbufresult = "",
-		tok = tokens.eof,
+		tok = -1,
 		lookahead = tokens.eof,
 	}, LexerMeta)
+
+	-- Preallocating string buffer to fulfill almost all needs
+	do
+		for i = 1, 64 do
+			lex.strbuf[i] = false
+		end
+	
+		for i = 1, 64 do
+			lex.strbuf[i] = nil
+		end
+	end
 
 	lex()
 
