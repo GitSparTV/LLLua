@@ -554,14 +554,17 @@ function LexerMeta:Lookahead()
 		self:Error("double lookahead")
 	end
 
-	self.lookahead = self:Scan()
+	local lookahead = self:Scan()
+	self.lookahead = lookahead
 
-	return self.lookahead
+	return lookahead
 end
+
+local stringchar = string.char
 
 function LexerMeta:SaveN(char)
 	local size = self.strbufsize
-	self.strbuf[size] = string.char(char)
+	self.strbuf[size] = stringchar(char)
 	self.strbufsize = size + 1
 end
 
@@ -571,13 +574,10 @@ function LexerMeta:Save(char)
 	self.strbufsize = size + 1
 end
 
-local stringchar = string.char
-
 function LexerMeta:SaveNext()
-	if self.c < 0 or self.c > 255 then
-		self:Error("LexState.c is out of range (" .. self.c .. ")")
-	end
-
+	-- if self.c < 0 or self.c > 255 then
+	-- 	self:Error("LexState.c is out of range (" .. self.c .. ")")
+	-- end
 	self:Save(stringchar(self.c))
 
 	return self()
@@ -630,11 +630,11 @@ local function LexerSetup(buffer)
 
 	-- Preallocating string buffer to fulfill almost all needs
 	do
-		for i = 1, 64 do
+		for i = 0, 64 do
 			lex.strbuf[i] = false
 		end
-	
-		for i = 1, 64 do
+
+		for i = 0, 64 do
 			lex.strbuf[i] = nil
 		end
 	end

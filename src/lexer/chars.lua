@@ -49,25 +49,15 @@ local function MakeMap(mask)
 end
 
 local iscntrl = MakeMap(cntrl)
-
 local isspace = MakeMap(space)
-
 local ispunct = MakeMap(punct)
-
 local isdigit = MakeMap(digit)
-
 local isxdigit = MakeMap(xdigit)
-
 local isupper = MakeMap(upper)
-
 local islower = MakeMap(lower)
-
 local isident = MakeMap(ident)
-
 local isalpha = MakeMap(alpha)
-
 local isalnum = MakeMap(alnum)
-
 local isgraph = MakeMap(graph)
 
 local iseol = {
