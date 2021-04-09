@@ -159,9 +159,8 @@ function LexerMeta:SkipEq()
 	return self.c == s and count or -count - 1
 end
 
-function LexerMeta:LongString(sep, iscomment)
-	local func = iscomment and self.Next or self.SaveNext
-	func(self)
+function LexerMeta:LongString(sep)
+	self:SaveNext()
 
 	if chars.iseol[self.c] then
 		self:Newline()
@@ -171,21 +170,45 @@ function LexerMeta:LongString(sep, iscomment)
 		local c = self.c
 
 		if c == EOF then
-			self:Error(iscomment and "LJ_ERR_XLCOM" or "LJ_ERR_XLSTR")
+			self:Error("LJ_ERR_XLSTR")
 		elseif c == char_rbrace then
 			if self:SkipEq() == sep then
-				func(self)
+				self:SaveNext()
 
 				return
 			end
-			if not iscomment then
-				self:Save("\n")
-			end
 		elseif chars.iseol[c] then
-
+			self:Save("\n")
 			self:Newline()
 		else
-			func(self)
+			self:SaveNext()
+		end
+	end
+end
+
+-- We use separate function for comment to eliminate branches in LongString()
+function LexerMeta:LongComment(sep)
+	self()
+
+	if chars.iseol[self.c] then
+		self:Newline()
+	end
+
+	while true do
+		local c = self.c
+
+		if c == EOF then
+			self:Error("LJ_ERR_XLCOM")
+		elseif c == char_rbrace then
+			if self:SkipEq() == sep then
+				self()
+
+				return
+			end
+		elseif chars.iseol[c] then
+			self:Newline()
+		else
+			self()
 		end
 	end
 end
@@ -444,7 +467,7 @@ function LexerMeta:Scan()
 				local sep = self:SkipEq()
 
 				if sep >= 0 then
-					self:LongString(sep, true)
+					self:LongComment(sep)
 					goto cont
 				end
 			end
