@@ -11,8 +11,8 @@ local alnum = bit.bor(alpha, digit) -- Alphabet + numbers
 local graph = bit.bor(alnum, punct) -- Graphical characters
 
 local char_bits = {
-    [0] = 0, -- -1 (EOF)
-	cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl + space, cntrl + space, cntrl + space, cntrl + space, cntrl + space, cntrl, cntrl; -- 0 (NUL) .. 15
+    [-1] = 0, -- -1 (EOF)
+	[0] = cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl + space, cntrl + space, cntrl + space, cntrl + space, cntrl + space, cntrl, cntrl; -- 0 (NUL) .. 15
 	cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl, cntrl; -- 16 .. 31
 	space, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct, punct; -- 32 ( ) .. 47 (/)
 	digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, digit + xdigit + ident, punct, punct, punct, punct, punct, punct; -- 48 (0) .. 63 (?)
@@ -33,7 +33,7 @@ local char_bits = {
 local bitband = bit.band
 
 local function isa(c, t)
-	return bitband(char_bits[c + 1], t) ~= 0
+	return bitband(char_bits[c], t) ~= 0
 end
 
 local function iscntrl(c)
