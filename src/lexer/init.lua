@@ -238,23 +238,20 @@ local chars_quotesnbackslash_lookup = {
 }
 
 function LexerMeta:String()
-	local delim = self.c -- Delimiter is '\'' or '"'. */
+	local delim = self.c
 	local c = self()
 
 	while c ~= delim do
-		-- print("Char: ", c >= 0 and string.char(c))
 		if c == EOF then
 			self:Error("LJ_ERR_XSTR")
 		elseif chars.iseol[c] then
 			self:Error("LJ_ERR_XSTR")
 		elseif c == char_backslash then
-			c = self() -- Skip the '\\'. */
+			c = self()
 
-			-- switch
 			if chars_escapes_lookup[c] then
 				c = chars_escapes_lookup[c]
 			elseif c == char_x then
-				-- Hexadecimal escape '\xXX'. */
 				c = bit.lshift(bit.band(self(), 15), 4)
 
 				if not chars.isdigit[self.c] then
@@ -275,7 +272,6 @@ function LexerMeta:String()
 					c = c + 9
 				end
 			elseif c == char_u then
-				-- Unicode escape '\u{XX...}'. */
 				if self() ~= char_lcurbrace then
 					goto err_xesc
 				end
@@ -296,7 +292,7 @@ function LexerMeta:String()
 					if c >= 0x110000 then
 						goto err_xesc
 					end
-				until self() == char_rcurbrace -- Out of Unicode range. */
+				until self() == char_rcurbrace
 
 				if c < 0x800 then
 					if c < 0x80 then
@@ -309,7 +305,6 @@ function LexerMeta:String()
 						self:SaveN(bit.bor(0xf0, bit.rshift(c, 18)))
 						self:SaveN(bit.bor(0x80, bit.band(bit.rshift(c, 12), 0x3f)))
 					else
-						-- No surrogates. */
 						if c >= 0xd800 and c < 0xe000 then
 							goto err_xesc
 						end
@@ -322,7 +317,6 @@ function LexerMeta:String()
 
 				c = bit.bor(0x80, bit.band(c, 0x3f))
 			elseif c == char_z then
-				-- Skip whitespace. */
 				c = self()
 
 				while chars.isspace[c] do
@@ -350,7 +344,7 @@ function LexerMeta:String()
 					goto err_xesc
 				end
 
-				c = c - char_0 -- Decimal escape '\ddd'. */
+				c = c - char_0
 
 				if chars.isdigit[self()] then
 					c = c * 10 + (self.c - char_0)
@@ -371,22 +365,18 @@ function LexerMeta:String()
 				goto cont
 			end
 
-			-- backslash second char if
 			::break_backslash::
 			self:SaveN(c)
 			c = self()
-		else -- BACKSLASH
+		else
 			c = self:SaveNext()
 		end
 
-		-- if
 		::cont::
 	end
 
-	-- while
-	self() -- Skip trailing delimiter. */
+	self()
 
-	-- print("Buffer: ", self:ConcatStrBuffer())
 	do
 		return
 	end
@@ -620,7 +610,6 @@ local function LexerNext(self)
 		self.tok = lookahead
 		self.lookahead = tokens.eof
 	end
-	-- print(tokennames[self.tok], self.linenumber)
 end
 
 local function LexerSetup(buffer)
