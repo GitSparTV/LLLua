@@ -48,7 +48,7 @@ function LexerMeta:Error(text)
 	end
 
 	local region = self.buf:sub(begin + 1, end_ - 1)
-	io.write("Lexer Error (", text, "):\nLine (might be incorrect): ", self.linenumber, ". Column: ", self.columnnumber, "\n", region, "\n", string.rep(" ", #region), "^\n", debug.traceback())
+	io.write("Lexer Error: ", text, "\nLine: ", self.linenumber, ". Column: ", self.columnnumber, ". Char: ", self.c, (self.c >= 1 and self.c <= 255) and (" (" .. string.char(self.c) .. ")") or "", "\n", region, "\n", string.rep(" ", self.offset - begin - 2), "^\n", debug.traceback())
 	os.exit(1)
 end
 
