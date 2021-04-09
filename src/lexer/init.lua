@@ -53,21 +53,16 @@ function LexerMeta:Error(text)
 	os.exit(1)
 end
 
-local char_newlines_lookup = {
-	[_b("\n")] = true,
-	[_b("\r")] = true
-}
-
 function LexerMeta:Newline()
 	local old = self.c
 
-	if not char_newlines_lookup[old] then
+	if not chars.iseol[old] then
 		self:Error("bad usage")
 	end
 
 	local c = self()
 
-	if char_newlines_lookup[c] and c ~= old then
+	if chars.iseol[c] and c ~= old then
 		self()
 	end
 
@@ -124,7 +119,7 @@ do
 	function LexerMeta:Number()
 		local c = self.c
 
-		if not chars.isdigit(c) then
+		if not chars.isdigit[c] then
 			self:Error("bad usage")
 		end
 
@@ -134,7 +129,7 @@ do
 			xp = char_p
 		end
 
-		while chars.isident(self.c) or self.c == char_dot or (char_exponent_sign_lookup[self.c] and bitbor(c, 0x20) == xp) do
+		while chars.isident[self.c] or self.c == char_dot or (char_exponent_sign_lookup[self.c] and bitbor(c, 0x20) == xp) do
 			c = self.c
 			self:SaveNext()
 		end
@@ -169,7 +164,7 @@ function LexerMeta:LongString(sep, iscomment)
 	local func = iscomment and self.Next or self.SaveNext
 	func(self)
 
-	if char_newlines_lookup[self.c] then
+	if chars.iseol[self.c] then
 		self:Newline()
 	end
 
@@ -184,10 +179,10 @@ function LexerMeta:LongString(sep, iscomment)
 
 				return
 			end
-		elseif char_newlines_lookup[c] then
 			if not iscomment then
 				self:Save("\n")
 			end
+		elseif chars.iseol[c] then
 
 			self:Newline()
 		else
@@ -228,7 +223,7 @@ function LexerMeta:String()
 		-- print("Char: ", c >= 0 and string.char(c))
 		if c == EOF then
 			self:Error("LJ_ERR_XSTR")
-		elseif char_newlines_lookup[c] then
+		elseif chars.iseol[c] then
 			self:Error("LJ_ERR_XSTR")
 		elseif c == char_backslash then
 			c = self() -- Skip the '\\'. */
@@ -240,8 +235,8 @@ function LexerMeta:String()
 				-- Hexadecimal escape '\xXX'. */
 				c = bit.lshift(bit.band(self(), 15), 4)
 
-				if not chars.isdigit(self.c) then
-					if not chars.isxdigit(self.c) then
+				if not chars.isdigit[self.c] then
+					if not chars.isxdigit[self.c] then
 						goto err_xesc
 					end
 
@@ -250,8 +245,8 @@ function LexerMeta:String()
 
 				c = c + bit.band(self(), 15)
 
-				if not chars.isdigit(self.c) then
-					if not chars.isxdigit(self.c) then
+				if not chars.isdigit[self.c] then
+					if not chars.isxdigit[self.c] then
 						goto err_xesc
 					end
 
@@ -268,8 +263,8 @@ function LexerMeta:String()
 				repeat
 					c = bit.bor(bit.lshift(c, 4), bit.band(self.c, 15))
 
-					if not chars.isdigit(self.c) then
-						if not chars.isxdigit(self.c) then
+					if not chars.isdigit[self.c] then
+						if not chars.isxdigit[self.c] then
 							goto err_xesc
 						end
 
@@ -308,8 +303,8 @@ function LexerMeta:String()
 				-- Skip whitespace. */
 				c = self()
 
-				while chars.isspace(c) do
-					if char_newlines_lookup[c] then
+				while chars.isspace[c] do
+					if chars.iseol[c] then
 						self:Newline()
 						c = self.c
 					else
@@ -318,7 +313,7 @@ function LexerMeta:String()
 				end
 
 				goto cont
-			elseif char_newlines_lookup[c] then
+			elseif chars.iseol[c] then
 				self:Save("\n")
 				self:Newline()
 				c = self.c
@@ -329,16 +324,16 @@ function LexerMeta:String()
 				c = self.c
 				goto cont
 			else
-				if not chars.isdigit(c) then
+				if not chars.isdigit[c] then
 					goto err_xesc
 				end
 
 				c = c - char_0 -- Decimal escape '\ddd'. */
 
-				if chars.isdigit(self()) then
+				if chars.isdigit[self()] then
 					c = c * 10 + (self.c - char_0)
 
-					if chars.isdigit(self()) then
+					if chars.isdigit[self()] then
 						c = c * 10 + (self.c - char_0)
 
 						if c > 255 then
@@ -424,8 +419,8 @@ function LexerMeta:Scan()
 		local c = self.c
 
 		-- io.write("Char: ", c, "\n")
-		if chars.isident(c) then
-			if chars.isdigit(c) then
+		if chars.isident[c] then
+			if chars.isdigit[c] then
 				self:Number()
 
 				return tokens.number
@@ -433,13 +428,13 @@ function LexerMeta:Scan()
 
 			repeat
 				c = self:SaveNext()
-			until not chars.isident(c)
+			until not chars.isident[c]
 			local str = self:ConcatStrBuffer()
 			local isreserved = reservedtokens[str]
 			if isreserved then return isreserved end
 
 			return tokens.name
-		elseif char_newlines_lookup[c] then
+		elseif chars.iseol[c] then
 			self:Newline()
 		elseif char_spaces_lookup[c] then
 			self()
@@ -455,7 +450,7 @@ function LexerMeta:Scan()
 				end
 			end
 
-			while not char_newlines_lookup[self.c] and self.c ~= EOF do
+			while not chars.iseol[self.c] and self.c ~= EOF do
 				self()
 			end
 
@@ -525,7 +520,7 @@ function LexerMeta:Scan()
 				else
 					return tokens.concat
 				end
-			elseif not chars.isdigit(self.c) then
+			elseif not chars.isdigit[self.c] then
 				return tokens.dot
 			else
 				self:Number()

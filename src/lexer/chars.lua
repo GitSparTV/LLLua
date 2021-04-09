@@ -36,69 +36,54 @@ local function isa(c, t)
 	return bitband(char_bits[c], t) ~= 0
 end
 
-local function iscntrl(c)
-	return isa(c, cntrl)
+local function MakeMap(mask)
+	local map = {}
+
+	for i = -1, #char_bits do
+		if isa(i, mask) then
+			map[i] = true
+		end
+	end
+
+	return map
 end
 
-local function isspace(c)
-	return isa(c, space)
-end
+local iscntrl = MakeMap(cntrl)
 
-local function ispunct(c)
-	return isa(c, punct)
-end
+local isspace = MakeMap(space)
 
-local function isdigit(c)
-	return isa(c, digit)
-end
+local ispunct = MakeMap(punct)
 
-local function isxdigit(c)
-	return isa(c, xdigit)
-end
+local isdigit = MakeMap(digit)
 
-local function isupper(c)
-	return isa(c, upper)
-end
+local isxdigit = MakeMap(xdigit)
 
-local function islower(c)
-	return isa(c, lower)
-end
+local isupper = MakeMap(upper)
 
-local function isident(c)
-	return isa(c, ident)
-end
+local islower = MakeMap(lower)
 
-local function isalpha(c)
-	return isa(c, alpha)
-end
+local isident = MakeMap(ident)
 
-local function isalnum(c)
-	return isa(c, alnum)
-end
+local isalpha = MakeMap(alpha)
 
-local function isgraph(c)
-	return isa(c, graph)
-end
+local isalnum = MakeMap(alnum)
 
-local chars_eol_lookup = {
+local isgraph = MakeMap(graph)
+
+local iseol = {
 	[string.byte("\n")] = true,
 	[string.byte("\r")] = true,
 }
 
-local function iseol(c)
-	return chars_eol_lookup[c]
-end
-
 local bitrshift = bit.rshift
 
 local function toupper(c)
-	return c - bitrshift(islower(c), 1)
+	return c - bitrshift(bitband(char_bits[c], lower), 1)
 end
 
 local function tolower(c)
-	return c + isupper(c)
+	return c + bitband(char_bits[c], upper)
 end
-
 
 return {
 	cntrl = cntrl,
