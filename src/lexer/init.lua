@@ -1,8 +1,7 @@
-io.stdout:setvbuf("no")
+-- io.stdout:setvbuf("full")
 -- local ffi = require("ffi")
-jit.opt.start("hotloop=25")
-local TK = require("tokens")
-local chars = require("chars")
+local TK = require("lexer.tokens")
+local chars = require("lexer.chars")
 local tokens, tokennames, reservedtokens = TK.tokens, TK.tokennames, TK.reserved
 local EOF = -1
 local _b = string.byte
@@ -624,5 +623,8 @@ end
 
 return {
 	Setup = LexerSetup,
-	Next = LexerNext
+	Next = LexerNext,
+	EOF = EOF,
+	tokens = tokens,
+	chars = chars
 }
