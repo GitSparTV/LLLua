@@ -2,7 +2,7 @@
 -- local ffi = require("ffi")
 local TK = require("lexer.tokens")
 local chars = require("lexer.chars")
-local tokens, tokennames, reservedtokens = TK.tokens, TK.tokennames, TK.reserved
+local tokens, reservedtokens = TK.tokens, TK.reserved
 local EOF = -1
 local _b = string.byte
 local MAX_LENGTH = 0x7fffff00
@@ -12,9 +12,9 @@ local LexerMeta = {
 		local offset = self.offset
 
 		if offset <= self.size then
-			local c = _b(self.buf, offset)
 			self.offset = offset + 1
 			self.columnnumber = self.columnnumber + 1
+			local c = _b(self.buf, offset)
 			self.c = c
 
 			return c
@@ -53,25 +53,32 @@ function LexerMeta:Error(text)
 end
 
 function LexerMeta:Newline()
-	local old = self.c
+	do
+		local old = self.c
 
-	if not chars.iseol[old] then
-		self:Error("bad usage")
+		if not chars.iseol[old] then
+			self:Error("bad usage")
+		end
+
+		do
+			local c = self()
+
+			if chars.iseol[c] and c ~= old then
+				self()
+			end
+		end
 	end
 
-	local c = self()
+	do
+		local linenumber = self.linenumber + 1
 
-	if chars.iseol[c] and c ~= old then
-		self()
+		if linenumber >= MAX_LENGTH then
+			self:Error("LJ_ERR_XLINES")
+		end
+
+		self.linenumber = linenumber
 	end
 
-	local linenumber = self.linenumber + 1
-
-	if linenumber >= MAX_LENGTH then
-		self:Error("LJ_ERR_XLINES")
-	end
-
-	self.linenumber = linenumber
 	self.columnnumber = 1
 end
 
@@ -108,10 +115,6 @@ do
 		-- if i == #str then
 		-- 	error("i")
 		-- end
-		if not tonumber(str) then
-			error(str)
-		end
-
 		return tonumber(str)
 	end
 
@@ -145,12 +148,13 @@ local char_lbrace, char_rbrace = _b("["), _b("]")
 local char_eq = _b("=")
 
 function LexerMeta:SkipEq()
-	local count = 0
 	local s = self.c
 
 	if not (s == char_lbrace or s == char_rbrace) then
 		self:Error("bad usage")
 	end
+
+	local count = 0
 
 	while self() == char_eq and count < 0x20000000 do
 		count = count + 1
@@ -633,10 +637,6 @@ local function LexerSetup(buffer)
 		for i = 0, 64 do
 			lex.strbuf[i] = false
 		end
-
-		for i = 0, 64 do
-			lex.strbuf[i] = nil
-		end
 	end
 
 	lex()
@@ -648,6 +648,6 @@ return {
 	Setup = LexerSetup,
 	Next = LexerNext,
 	EOF = EOF,
-	tokens = tokens,
+	tokens = TK,
 	chars = chars
 }
