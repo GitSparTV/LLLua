@@ -1,19 +1,21 @@
 -- Lexer tokens
 local tokens = {
-	"eof", "nil", "false", "true";
-	"local", "return", "break", "goto";
-	"not", "and", "or";
-	"if", "then", "else", "elseif";
-	"do", "end", "function", "for", "in", "repeat", "until", "while";
-	"minus", "plus", "assign", "less", "greater", "div", "mul", "modulo", "pow", "lparen", "rparen", "len", "comma", "terminator", "lcurbrace", "rcurbrace", "lbrace", "rbrace";
-	"eq", "ge", "le", "ne";
-	"dot", "method", "concat", "dots", "label", "number", "name", "string",
+	"and", "break", "do", "else", "elseif", "end", "false";
+	"for", "function", "goto", "if", "in", "local", "nil", "not", "or";
+	"repeat", "return", "then", "true", "until", "while";
+	"concat", "dots", "eq", "ge", "le", "ne";
+	"label", "number", "name", "string";
+	"eof";
+	"plus", "minus", "mul", "div", "mod", "pow", "greater", "less";
+	"lbrace", "rbrace", "lcurbrace", "rcurbrace", "lparen", "rparen";
+	"assign", "dot", "comma", "colon", "semicolon", "len";
+	"tilde";
 }
 
 local reserved = {}
 
--- 2 = nil, 23 = while
-for k = 2, 23 do
+-- 1 = and, 22 = while
+for k = 1, 22 do
 	reserved[tokens[k]] = k
 end
 
@@ -22,39 +24,40 @@ for k = 1, #tokens do
 	tokens[tokens[k]] = k
 end
 
--- Token name table, we use metatable to fallback to their literal name
+-- Token names table, we use metatable to fallback to their literal name
 local tokennames = setmetatable({
-	[tokens.eof] = "<eof>";
-	[tokens.minus] = "-",
-	[tokens.plus] = "+",
-	[tokens.assign] = "=",
-	[tokens.less] = "<",
-	[tokens.greater] = ">",
-	[tokens.div] = "/",
-	[tokens.mul] = "*",
-	[tokens.modulo] = "%",
-	[tokens.pow] = "^",
-	[tokens.lparen] = "(",
-	[tokens.rparen] = ")",
-	[tokens.len] = "#",
-	[tokens.comma] = ",",
-	[tokens.terminator] = ";",
-	[tokens.lcurbrace] = "{",
-	[tokens.rcurbrace] = "}",
-	[tokens.lbrace] = "[",
-	[tokens.rbrace] = "]";
+	[tokens.concat] = "..",
+	[tokens.dots] = "...",
 	[tokens.eq] = "==",
 	[tokens.ge] = ">=",
 	[tokens.le] = "<=",
 	[tokens.ne] = "~=";
-	[tokens.concat] = ".",
-	[tokens.concat] = ":",
-	[tokens.concat] = "..",
-	[tokens.dots] = "...",
 	[tokens.label] = "::",
 	[tokens.number] = "<number>",
 	[tokens.name] = "<name>",
 	[tokens.string] = "<string>";
+	[tokens.eof] = "<eof>";
+	[tokens.plus] = "+",
+	[tokens.minus] = "-",
+	[tokens.mul] = "*",
+	[tokens.div] = "/",
+	[tokens.mod] = "%",
+	[tokens.pow] = "^",
+	[tokens.greater] = ">";
+	[tokens.less] = "<",
+	[tokens.lbrace] = "[",
+	[tokens.rbrace] = "]",
+	[tokens.lcurbrace] = "{",
+	[tokens.rcurbrace] = "}",
+	[tokens.lparen] = "(",
+	[tokens.rparen] = ")";
+	[tokens.assign] = "=",
+	[tokens.dot] = ".",
+	[tokens.comma] = ",",
+	[tokens.colon] = ":",
+	[tokens.semicolon] = ";",
+	[tokens.len] = "#";
+	[tokens.tilde] = "~";
 }, {
 	__index = tokens
 })

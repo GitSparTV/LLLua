@@ -409,23 +409,19 @@ local char_colon = _b(":")
 local char_dot = _b(".")
 
 local chars_single_tokens_lookup = {
-	[_b("<")] = tokens.less,
-	[_b(">")] = tokens.greater,
 	[_b("+")] = tokens.plus,
-	[_b("-")] = tokens.minus,
-	[_b("/")] = tokens.div,
 	[_b("*")] = tokens.mul,
-	[_b("%")] = tokens.modulo,
+	[_b("/")] = tokens.div,
+	[_b("%")] = tokens.mod,
 	[_b("^")] = tokens.pow,
-	[_b("(")] = tokens.lparen,
-	[_b(")")] = tokens.rparen,
-	[_b("#")] = tokens.len,
-	[_b(",")] = tokens.comma,
-	[_b(";")] = tokens.terminator,
+	[_b("]")] = tokens.rbrace,
 	[_b("{")] = tokens.lcurbrace,
 	[_b("}")] = tokens.rcurbrace,
-	[_b("[")] = tokens.lbrace,
-	[_b("]")] = tokens.rbrace,
+	[_b("(")] = tokens.lparen,
+	[_b(")")] = tokens.rparen;
+	[_b(",")] = tokens.comma,
+	[_b(";")] = tokens.semicolon,
+	[_b("#")] = tokens.len;
 }
 
 function LexerMeta:Scan()
