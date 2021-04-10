@@ -47,9 +47,8 @@ function LexerMeta:Error(text)
 		end_ = end_ + 1
 	end
 
-	local region = self.buf:sub(begin + 1, end_ - 1)
-	io.write("Lexer Error: ", text, "\nLine: ", self.linenumber, ". Column: ", self.columnnumber, ". Char: ", self.c, (self.c >= 1 and self.c <= 255) and (" (" .. string.char(self.c) .. ")") or "", "\n", region, "\n", string.rep(" ", self.offset - begin - 2), "^\n", debug.traceback())
-	os.exit(1)
+	local region = self.buf:sub(begin + 1, end_)
+	error("Lexer Error: " .. text .. "\nLine: " .. self.linenumber .. ". Column: " .. (self.columnnumber - 1) .. ". Char: " .. self.c .. ((self.c >= 1 and self.c <= 255) and (" (" .. string.char(self.c) .. ")") or "") .. "\n" .. region .. "\n" .. string.rep(" ", self.offset - begin - 2) .. "^\n")
 end
 
 function LexerMeta:Newline()
@@ -425,7 +424,7 @@ local chars_single_tokens_lookup = {
 }
 
 function LexerMeta:Scan()
-	self:ResetStrBuffer()
+	self:ResetStrBuffer() -- this should be done in parser on getting the string
 
 	while true do
 		local c = self.c
@@ -505,7 +504,7 @@ function LexerMeta:Scan()
 			end
 		elseif c == char_tilde then
 			if self() ~= char_eq then
-				self:Error("unexpected symbol '~'")
+				return tokens.tilde
 			else
 				self()
 
@@ -513,7 +512,7 @@ function LexerMeta:Scan()
 			end
 		elseif c == char_colon then
 			if self() ~= char_colon then
-				return tokens.method
+				return tokens.colon
 			else
 				self()
 
