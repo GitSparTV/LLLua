@@ -127,72 +127,89 @@ end
 local char_lbrace, char_rbrace = _b("["), _b("]")
 local char_eq = _b("=")
 
-function LexerMeta:SkipEq()
-	local s = self.c
+do
+	function LexerMeta:SkipEq()
+		local s = self.c
 
-	if not (s == char_lbrace or s == char_rbrace) then
-		self:Error("bad usage")
+		if not (s == char_lbrace or s == char_rbrace) then
+			self:Error("bad usage")
+		end
+
+		local count = 0
+
+		while self:SaveNext() == char_eq and count < 0x20000000 do
+			count = count + 1
+		end
+
+		return self.c == s and count or -count - 1
 	end
 
-	local count = 0
+	function LexerMeta:LongString(sep)
+		self()
 
-	while self() == char_eq and count < 0x20000000 do
-		count = count + 1
-	end
-
-	return self.c == s and count or -count - 1
-end
-
-function LexerMeta:LongString(sep)
-	self:SaveNext()
-
-	if chars.iseol[self.c] then
-		self:Newline()
-	end
-
-	while true do
-		local c = self.c
-
-		if c == EOF then
-			self:Error("LJ_ERR_XLSTR")
-		elseif c == char_rbrace then
-			if self:SkipEq() == sep then
-				self:SaveNext()
-
-				return
-			end
-		elseif chars.iseol[c] then
-			self:Save("\n")
+		if chars.iseol[self.c] then
 			self:Newline()
-		else
-			self:SaveNext()
+		end
+
+		while true do
+			local c = self.c
+
+			if c == EOF then
+				self:Error("LJ_ERR_XLSTR")
+			elseif c == char_rbrace then
+				if self:SkipEq() == sep then
+					self.strbufsize = self.strbufsize - sep - 1
+					self()
+
+					return
+				end
+			elseif chars.iseol[c] then
+				self:Save("\n")
+				self:Newline()
+			else
+				self:SaveNext()
+			end
 		end
 	end
 end
 
 -- We use separate function for comment to eliminate branches in LongString()
-function LexerMeta:LongComment(sep)
-	self()
+do
+	function LexerMeta:SkipEqComment()
+		local s = self.c
 
-	if chars.iseol[self.c] then
-		self:Newline()
+		if not (s == char_lbrace or s == char_rbrace) then
+			self:Error("bad usage")
+		end
+
+		local count = 0
+
+		while self() == char_eq and count < 0x20000000 do
+			count = count + 1
+		end
+
+		return self.c == s and count or -count - 1
 	end
 
-	while true do
-		local c = self.c
+	function LexerMeta:LongComment(sep)
+		self()
 
-		if c == EOF then
-			self:Error("LJ_ERR_XLCOM")
-		elseif c == char_rbrace then
-			if self:SkipEq() == sep then
+		while true do
+			local c = self.c
+
+			if c == EOF then
+				self:Error("LJ_ERR_XLCOM")
+			elseif c == char_rbrace then
+				if self:SkipEqComment() == sep then
+					self()
+
+					return
+				end
+			elseif chars.iseol[c] then
+				self:Newline()
+			else
 				self()
-
-				return
 			end
-		elseif chars.iseol[c] then
-			self:Newline()
-		else
-			self()
 		end
 	end
 end
