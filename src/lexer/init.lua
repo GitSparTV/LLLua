@@ -99,24 +99,6 @@ do
 	local char_e, char_p = _b("e"), _b("p")
 	local bitbor = bit.bor
 
-	local function ScanNumber(str)
-		-- str = string.lower(str)
-		-- local _, ull = string.find(str, "ull", len - 2, true)
-		-- local _, llu = string.find(str, "llu", len - 2, true)
-		-- if ull == #str or llu == #str then
-		-- 	error("ULL")
-		-- end
-		-- local _, ll = string.find(str, "ll", len - 3, true)
-		-- if ll == #str then
-		-- 	error("LL")
-		-- end
-		-- local _, i = string.find(str, "i", len - 4, true)
-		-- if i == #str then
-		-- 	error("i")
-		-- end
-		return tonumber(str)
-	end
-
 	function LexerMeta:Number()
 		local c = self.c
 
@@ -135,11 +117,10 @@ do
 			self:SaveNext()
 		end
 
-		local num = ScanNumber(self:ConcatStrBuffer())
-
-		if not num then
-			self:Error("LJ_ERR_XNUMBER")
-		end
+		--Do this in parser
+		-- if not num then
+			-- self:Error("LJ_ERR_XNUMBER")
+		-- end
 	end
 end
 
