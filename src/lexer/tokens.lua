@@ -6,10 +6,9 @@ local tokens = {
 	"concat", "dots", "eq", "ge", "le", "ne";
 	"label", "number", "name", "string";
 	"eof";
-	"plus", "minus", "mul", "div", "mod", "pow", "greater", "less";
-	"lbrace", "rbrace", "lcurbrace", "rcurbrace", "lparen", "rparen";
-	"assign", "dot", "comma", "colon", "semicolon", "len";
-	"tilde";
+	"plus", "minus", "mul", "div", "mod", "pow", "len";
+	"less", "greater", "assign", "lparen", "rparen", "lcurbrace", "rcurbrace", "lbrace", "rbrace";
+	"semicolon", "colon", "comma", "dot", "tilde";
 }
 
 local reserved = {}

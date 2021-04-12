@@ -87,6 +87,7 @@ return {
 	alpha = alpha,
 	alnum = alnum,
 	graph = graph,
+	char_bits = char_bits,
 	isa = isa,
 	iscntrl = iscntrl,
 	isspace = isspace,
