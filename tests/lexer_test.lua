@@ -317,6 +317,7 @@ do
 	local function TestToken(script, token)
 		local a = GetToken(script)
 
+		assert_stack(1)
 		assert_cmp(tokennames[a] or a, tokennames[token], "Token mismatch.")
 	end
 
@@ -394,6 +395,109 @@ do
 	TestToken("#", tokens.len)
 end
 
+-- Testing lexing errors
+do
+	local function GetError(script)
+		local lex = Lexer.Setup(script)
+		local _, err = pcall(Lexer.Next, lex)
+
+		return err
+	end
+
+	local function TestMethod(script, error, method, ...)
+		local lex = Lexer.Setup(script)
+		local _, err = pcall(lex[method], lex, ...)
+
+		assert_stack(1)
+		assert(tostring(err):find(error, nil, true), "Error mismatch. (Expected: ", error, ", got ", tostring(err), ")")
+	end
+
+	local function TestError(script, error, hint)
+		local err = tostring(GetError(script))
+
+		assert_stack(1)
+		assert(err:find(error, nil, true), "Error mismatch in ", hint, ". (Expected: ", error, ", got ", err, "). Test ")
+	end
+
+	TestMethod("notanewline", "bad usage", "Newline")
+
+	do
+		local lex = Lexer.Setup("\n")
+		local MAX_LENGTH = 0x7fffff00
+		lex.linenumber = MAX_LENGTH - 1
+		local _, err = pcall(lex.Newline, lex)
+
+		assert(tostring(err):find("LJ_ERR_XLINES", nil, true), "Error mismatch when lex.linenumber exceeds limit. (Expected: LJ_ERR_XLINES, got ", tostring(err), ")")
+	end
+
+	TestMethod("notanumber", "bad usage", "Number")
+	TestMethod("notabrace", "bad usage", "SkipEq")
+	TestMethod("notabrace", "bad usage", "SkipEqComment")
+	TestError("[[", "LJ_ERR_XLSTR", "lex:LongString()")
+	TestError("--[===[", "LJ_ERR_XLCOM", "lex:LongComment()")
+	TestError("\"", "LJ_ERR_XSTR", "lex:String() on EOF")
+	TestError("\"\n\"", "LJ_ERR_XSTR", "lex:String() on newline")
+	TestError("\"\n\"", "LJ_ERR_XSTR", "lex:String() on newline")
+	TestError("\"\\xQ\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\x with first invalid character")
+	TestError("\"\\x1G\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\x with second invalid character")
+	TestError("\"\\xAG\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\x with second invalid character")
+	TestError("\"\\xAG\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\x with second invalid character")
+	TestError("\"\\u\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when first character is not `{`")
+	TestError("\"\\u{\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when sequence is not enclosed with `}`")
+	TestError("\"\\u{}\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when sequence is empty")
+	TestError("\"\\u{Q}\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u with invalid character")
+	TestError("\"\\u{110000}\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when the number is out of Unicode range")
+	TestError("\"\\u{110001}\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when the number is out of Unicode range")
+	TestError("\"\\u{FFFFFF}\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when the number is out of Unicode range")
+	TestError("\"\\u{d800}\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when the number is a surrogate")
+	TestError("\"\\u{d801}\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when the number is a surrogate")
+	TestError("\"\\u{DFfF}\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when the number is a surrogate")
+	TestError("\"\\u{dffe}\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when the number is a surrogate")
+	TestError("\"\\u{DBFF}\"", "LJ_ERR_XESC", "lex:String() on escape sequence \\u when the number is a surrogate")
+	TestError("\"\\lol\"", "LJ_ERR_XESC", "lex:String() on invalid escape sequence")
+	TestError("\"\\why\"", "LJ_ERR_XESC", "lex:String() on invalid escape sequence")
+	TestError("\"\\256\"", "LJ_ERR_XESC", "lex:String() on numeric escape sequence when the number is higher than 255")
+	TestError("\"\\999\"", "LJ_ERR_XESC", "lex:String() on numeric escape sequence when the number is higher than 255")
+	TestError("[==", "LJ_ERR_XLDELIM", "long string literal")
+
+	do
+		TestMethod("", "lex.c is out of range (-1)", "SaveNext")
+		TestMethod("", "char is out of range (-1)", "SaveN", -1)
+		TestMethod("", "char is out of range (1000)", "SaveN", 1000)
+	end
+
+	do
+		local lex = Lexer.Setup("a b c")
+
+		lex:Lookahead()
+		local _, err = pcall(lex.Lookahead, lex)
+
+		assert(tostring(err):find("double lookahead", nil, true), "Error mismatch when lex:Lookahead() is called twice. (Expected: double lookahead, got ", tostring(err), ")")
+	end
+
+	do
+		local lex = Lexer.Setup("-")
+
+		local original = tokens.minus
+		tokens.minus = nil
+		local _, err = pcall(Lexer.Next, lex)
+		tokens.minus = original
+
+		assert(tostring(err):find("token is nil", nil, true), "Error mismatch when lex.tok is not defined in Lexer.Next (Expected: , got ", tostring(err), ")")
+	end
+
+	do
+		local lex = Lexer.Setup("-")
+
+		local original = tokens.minus
+		tokens.minus = nil
+		local _, err = pcall(lex.Lookahead, lex)
+		tokens.minus = original
+
+		assert(tostring(err):find("token is nil", nil, true), "Error mismatch when lex.tok is not defined in lex:Lookahead() (Expected: , got ", tostring(err), ")")
+	end
+end
+
 -- Testing lexing consistency with LuaJIT
 do
 	local function ParseLJTokens(file)
@@ -427,3 +531,7 @@ do
 		assert_cmp(TokenMap[LJTokensEnum[LJTokens[k]]], v, "Token ", k, " mismatch. ", LJTokensEnum[LJTokens[k]], " ", tokennames[v])
 	end
 end
+
+-- TODO: number reading
+-- TODO: string reading
+-- TODO: string escapes reading
