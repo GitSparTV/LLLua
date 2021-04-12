@@ -552,6 +552,9 @@ function LexerMeta:Lookahead()
 	end
 
 	local lookahead = self:Scan()
+	if not lookahead then
+		self:Error("token is nil")
+	end
 	self.lookahead = lookahead
 
 	return lookahead
@@ -560,6 +563,10 @@ end
 local stringchar = string.char
 
 function LexerMeta:SaveN(char)
+	if char < 0 or char > 255 then
+		self:Error("char is out of range (" .. char .. ")")
+	end
+
 	local size = self.strbufsize
 	self.strbuf[size] = stringchar(char)
 	self.strbufsize = size + 1
@@ -572,9 +579,10 @@ function LexerMeta:Save(char)
 end
 
 function LexerMeta:SaveNext()
-	-- if self.c < 0 or self.c > 255 then
-	-- 	self:Error("LexState.c is out of range (" .. self.c .. ")")
-	-- end
+	if self.c < 0 or self.c > 255 then
+		self:Error("lex.c is out of range (" .. self.c .. ")")
+	end
+
 	self:Save(stringchar(self.c))
 
 	return self()
@@ -598,11 +606,12 @@ local function LexerNext(self)
 	local lookahead = self.lookahead
 
 	if lookahead == tokens.eof then
-		self.tok = self:Scan()
+		local tok = self:Scan()
 
-		if not self.tok then
-			self:Error("Token is nil")
+		if not tok then
+			self:Error("token is nil")
 		end
+		self.tok = tok
 	else
 		self.tok = lookahead
 		self.lookahead = tokens.eof
