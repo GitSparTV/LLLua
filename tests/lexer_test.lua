@@ -1,5 +1,4 @@
-require("assert_advanced")
-package.path = package.path .. "..\\src\\?\\init.lua;..\\src\\?.lua;"
+require("test_tools")
 
 local LJTokensEnum = {"TK_and", "TK_break", "TK_do", "TK_else", "TK_elseif", "TK_end", "TK_false", "TK_for", "TK_function", "TK_goto", "TK_if", "TK_in", "TK_local", "TK_nil", "TK_not", "TK_or", "TK_repeat", "TK_return", "TK_then", "TK_true", "TK_until", "TK_while", "TK_concat", "TK_dots", "TK_eq", "TK_ge", "TK_le", "TK_ne", "TK_label", "TK_number", "TK_name", "TK_string", "TK_eof"}
 
