@@ -442,3 +442,4 @@ Yes, and I'm fine with it.
 
 ---
 Spar
+[![HitCount](https://hits.dwyl.com/GitSparTV/LLLua-CONCEPT.svg?style=flat-square)](http://hits.dwyl.com/GitSparTV/LLLua-CONCEPT)
